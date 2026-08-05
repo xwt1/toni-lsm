@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -10,15 +10,28 @@ namespace tiny_lsm {
 class StdFile {
 
 private:
-  std::fstream file_;
+#ifdef _WIN32
+  // 不透明句柄：Windows 下为 HANDLE（void*），避免在头文件引入 windows.h
+  void *handle_ = reinterpret_cast<void *>(static_cast<intptr_t>(-1));
+#else
+  int fd_ = -1;
+#endif
   std::filesystem::path filename_;
 
 public:
-  StdFile() {}
+  StdFile() = default;
   ~StdFile() {
-    if (file_.is_open()) {
+    if (is_open()) {
       close();
     }
+  }
+
+  bool is_open() const {
+#ifdef _WIN32
+    return handle_ != reinterpret_cast<void *>(static_cast<intptr_t>(-1));
+#else
+    return fd_ >= 0;
+#endif
   }
 
   // 打开文件并映射到内存
